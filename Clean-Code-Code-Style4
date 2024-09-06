@@ -112,7 +112,7 @@ namespace IMJunior
 
         public string ShowForm()
         {
-            string availableSystems = string.Join(", ", _context.Factories.Select(f => f.Name));
+            string availableSystems = string.Join(", ", _context.Factories.Select(factory => factory.Name));
 
             Console.WriteLine("Мы принимаем: QIWI, WebMoney, Card");
             Console.WriteLine("Какое системой вы хотите совершить оплату?");
@@ -132,7 +132,7 @@ namespace IMJunior
 
         public IPaymentSystem Create(string systemId)
         {
-            var factory = _context.Factories.FirstOrDefault(f => f.Name.Equals(systemId, StringComparison.OrdinalIgnoreCase));
+            var factory = _context.Factories.FirstOrDefault(factory => factory.Name.Equals(systemId, StringComparison.OrdinalIgnoreCase));
 
             if (factory == null)
                 throw new NotSupportedException($"Платёжная система {systemId} не поддерживается.");
