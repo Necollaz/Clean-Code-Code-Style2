@@ -1,0 +1,110 @@
+namespace IMJunior
+{
+    public class Program
+    {
+        static void Main(string[] args)
+        {
+            OrderForm orderForm = new OrderForm();
+            PaymentHandler paymentHandler = new PaymentHandler();
+            var systemId = orderForm.ShowForm();
+            IPaymentSystem paymentSystem = PaymentFactory.Create(systemId);
+
+            paymentSystem.Processing();
+            paymentHandler.ShowPaymentResult(paymentSystem);
+        }
+    }
+
+    public interface IPaymentSystem
+    {
+        public void Check();
+        public void Processing();
+    }
+
+    public class QIWI : IPaymentSystem
+    {
+        public void Check()
+        {
+            Console.WriteLine("Перевод на страницу QIWI...");
+        }
+
+        public void Processing()
+        {
+            Console.WriteLine("Проверка платежа через QIWI...");
+        }
+    }
+
+    public class WebMoney : IPaymentSystem
+    {
+        public void Check()
+        {
+            Console.WriteLine("Вызов API WebMoney...");
+        }
+
+        public void Processing()
+        {
+            Console.WriteLine("Проверка платежа через WebMoney...");
+        }
+    }
+
+    public class Card : IPaymentSystem
+    {
+        public void Check()
+        {
+            Console.WriteLine("Вызов API банка эмитера карты Card...");
+        }
+
+        public void Processing()
+        {
+            Console.WriteLine("Проверка платежа через Card...");
+        }
+    }
+
+    public class PaymentFactory
+    {
+        private const string QIWIId = "QIWI";
+        private const string WebMoneyId = "WebMoney";
+        private const string CardId = "Card";
+
+        public static IPaymentSystem Create(string systemId)
+        {
+            if (string.IsNullOrEmpty(systemId))
+                throw new ArgumentNullException(nameof(systemId));
+
+            return systemId switch
+            {
+                QIWIId => new QIWI(),
+                WebMoneyId => new WebMoney(),
+                CardId => new Card(),
+                _ => throw new NotSupportedException($"Платёжная система {systemId} не поддерживается.")
+            };
+        }
+    }
+
+    public class OrderForm
+    {
+        public string ShowForm()
+        {
+            Console.WriteLine("Мы принимаем: QIWI, WebMoney, Card");
+            Console.WriteLine("Какое системой вы хотите совершить оплату?");
+
+            return Console.ReadLine();
+        }
+    }
+
+    public class PaymentHandler
+    {
+        public void ShowPaymentResult(IPaymentSystem paymentSystem)
+        {
+            if (paymentSystem == null)
+                throw new ArgumentNullException(nameof(paymentSystem));
+
+            string systemId = paymentSystem.GetType().Name;
+
+            Console.WriteLine($"Вы оплатили с помощью {systemId}");
+
+            paymentSystem.Check();
+
+            Console.WriteLine("Оплата прошла успешно!");
+        }
+    }
+}
