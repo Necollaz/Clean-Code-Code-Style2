@@ -13,12 +13,19 @@ namespace IMJunior
 
             ApplicationContext applicationContext = new ApplicationContext(factories);
             OrderForm orderForm = new OrderForm(applicationContext);
-            PaymentHandler paymentHandler = new PaymentHandler(applicationContext);
-            var systemId = orderForm.ShowForm();
-            IPaymentSystem paymentSystem = paymentHandler.Create(systemId);
 
-            paymentSystem.Processing();
-            paymentHandler.ShowResult(paymentSystem);
+            var systemId = orderForm.ShowForm();
+            var factory = applicationContext.Factories.FirstOrDefault(factory => factory.Name.Equals(systemId, StringComparison.OrdinalIgnoreCase));
+            if(factory != null)
+            {
+                PaymentHandler paymentHandler = new PaymentHandler(factory);
+                paymentHandler.ProcessPayment();
+                paymentHandler.ShowResult();
+            }
+            else
+            {
+                Console.WriteLine($"Платёжная система {systemId} не поддерживается.");
+            }
         }
     }
 
@@ -70,7 +77,7 @@ namespace IMJunior
     public interface IPaymentFactory
     {
         public string Name { get; }
-        IPaymentSystem Create();
+        public IPaymentSystem Create();
     }
 
     public class QiwiFactory : IPaymentFactory
@@ -93,28 +100,28 @@ namespace IMJunior
 
     public class ApplicationContext
     {
-        public IEnumerable<IPaymentFactory> Factories { get; }
-
         public ApplicationContext(IEnumerable<IPaymentFactory> factories)
         {
             Factories = factories ?? throw new ArgumentNullException(nameof(factories));
         }
+
+        public IEnumerable<IPaymentFactory> Factories { get; }
     }
 
     public class OrderForm
     {
         private readonly ApplicationContext _context;
+        private readonly string _availableSystems;
 
         public OrderForm(ApplicationContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _availableSystems = string.Join(", ", _context.Factories.Select(factory => factory.Name));
         }
 
         public string ShowForm()
         {
-            string availableSystems = string.Join(", ", _context.Factories.Select(factory => factory.Name));
-
-            Console.WriteLine("Мы принимаем: QIWI, WebMoney, Card");
+            Console.WriteLine($"Мы принимаем: {_availableSystems}");
             Console.WriteLine("Какое системой вы хотите совершить оплату?");
 
             return Console.ReadLine();
@@ -123,34 +130,22 @@ namespace IMJunior
 
     public class PaymentHandler
     {
-        private readonly ApplicationContext _context;
+        private readonly IPaymentSystem _system;
 
-        public PaymentHandler(ApplicationContext context)
+        public PaymentHandler(IPaymentFactory factory)
         {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _system = factory?.Create() ?? throw new ArgumentNullException(nameof(factory));
         }
 
-        public IPaymentSystem Create(string systemId)
+        public void ProcessPayment()
         {
-            var factory = _context.Factories.FirstOrDefault(factory => factory.Name.Equals(systemId, StringComparison.OrdinalIgnoreCase));
-
-            if (factory == null)
-                throw new NotSupportedException($"Платёжная система {systemId} не поддерживается.");
-
-            return factory.Create();
+            _system.Processing();
         }
 
-        public void ShowResult(IPaymentSystem paymentSystem)
+        public void ShowResult()
         {
-            if (paymentSystem == null)
-                throw new ArgumentNullException(nameof(paymentSystem));
-
-            string systemId = paymentSystem.GetType().Name;
-
-            Console.WriteLine($"Вы оплатили с помощью {systemId}");
-
-            paymentSystem.Check();
-
+            Console.WriteLine($"Вы оплатили с помощью {_system.GetType().Name}");
+            _system.Check();
             Console.WriteLine("Оплата прошла успешно!");
         }
     }
